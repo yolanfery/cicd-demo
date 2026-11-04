@@ -16,10 +16,14 @@ jobs:
 
       - name: Build the image and check the page is served
         run: |
+          echo "==> Building the image"
           docker build -t app .
+          echo "==> Starting a container on port 8080"
           docker run -d -p 8080:80 app
           sleep 2
+          echo "==> Checking the page answers and contains an <h1>"
           curl -fs localhost:8080 | grep "<h1>"
+          echo "==> Test passed"
 
   release:
     needs: test
@@ -31,6 +35,16 @@ jobs:
         with:
           release-type: simple
 
+      - name: Release-please result
+        run: |
+          echo "release_created = '${{ steps.rp.outputs.release_created }}'"
+          echo "version         = '${{ steps.rp.outputs.version }}'"
+          if [ -z "${{ steps.rp.outputs.release_created }}" ]; then
+            echo "==> No release this time: release PR opened/updated (or nothing to release). Nothing is deployed."
+          else
+            echo "==> Release ${{ steps.rp.outputs.version }} created: building and deploying."
+          fi
+
       - if: steps.rp.outputs.release_created
         uses: actions/checkout@v4
 
@@ -38,8 +52,11 @@ jobs:
         name: Build and push image
         run: |
           IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/cicd-demo:${{ steps.rp.outputs.version }}
+          echo "==> Logging in to Docker Hub"
           echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          echo "==> Building $IMAGE"
           docker build -t $IMAGE .
+          echo "==> Pushing $IMAGE"
           docker push $IMAGE
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
 
@@ -48,6 +65,9 @@ jobs:
         run: |
           echo "${{ secrets.SSH_KEY }}" > key && chmod 600 key
           SSH="-i key -o StrictHostKeyChecking=no"
+          echo "==> Copying docker-compose.yml to the server"
           scp $SSH docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/
+          echo "==> Pulling $IMAGE and restarting the container on the server"
           ssh $SSH ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "IMAGE=$IMAGE docker compose pull && IMAGE=$IMAGE docker compose up -d"
+            "IMAGE=$IMAGE docker compose pull && IMAGE=$IMAGE docker compose up -d && IMAGE=$IMAGE docker compose ps"
+          echo "==> Deployed $IMAGE"
