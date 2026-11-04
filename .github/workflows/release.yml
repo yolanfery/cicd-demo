@@ -2,13 +2,28 @@ name: release
 on:
   push:
     branches: [main]
+  pull_request:
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image and check the page is served
+        run: |
+          docker build -t app .
+          docker run -d -p 8080:80 app
+          sleep 2
+          curl -fs localhost:8080 | grep "<h1>"
+
   release:
+    needs: test
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - id: rp

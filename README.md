@@ -2,6 +2,8 @@
 
 Commit with `feat:` / `fix:` → release-please opens a release PR → merge it → image pushed to Docker Hub → deployed on the server.
 
+Every push and PR first runs a **test** job (build the image, start it, check the page has an `<h1>`). If it fails, nothing is released or deployed.
+
 ## Setup
 
 1. **Server** (Ubuntu, see [PROVIDERS.md](PROVIDERS.md)): `curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker $USER`, then log out and back in.
