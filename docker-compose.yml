@@ -1,0 +1,6 @@
+services:
+  web:
+    image: ${IMAGE}
+    ports:
+      - "80:80"
+    restart: unless-stopped

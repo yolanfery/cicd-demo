@@ -1,0 +1,38 @@
+name: release
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+
+      - if: steps.rp.outputs.release_created
+        uses: actions/checkout@v4
+
+      - if: steps.rp.outputs.release_created
+        name: Build and push image
+        run: |
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/cicd-demo:${{ steps.rp.outputs.version }}
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          docker build -t $IMAGE .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - if: steps.rp.outputs.release_created
+        name: Deploy
+        run: |
+          echo "${{ secrets.SSH_KEY }}" > key && chmod 600 key
+          SSH="-i key -o StrictHostKeyChecking=no"
+          scp $SSH docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/
+          ssh $SSH ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "IMAGE=$IMAGE docker compose pull && IMAGE=$IMAGE docker compose up -d"
