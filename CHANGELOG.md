@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/yolanfery/cicd-demo/compare/v1.1.0...v1.2.0) (2026-11-05)
+
+
+### Features
+
+* feature 2 ([705cc97](https://github.com/yolanfery/cicd-demo/commit/705cc97fff7739797b86a35cd7027eb358d542c4))
+
 ## [1.1.0](https://github.com/yolanfery/cicd-demo/compare/v1.0.0...v1.1.0) (2026-11-04)
 
 
